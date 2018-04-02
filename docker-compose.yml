@@ -1,0 +1,51 @@
+version: '2.0'
+networks:
+  lb_web:
+    external: true
+  back:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+      - subnet: 10.0.${SUBNET}.0/24
+services:
+  web:
+    image: nginx
+    volumes:
+    - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    environment:
+    - VIRTUAL_HOST
+    networks:
+    - back
+    - lb_web
+  app:
+    image: ghost:1-alpine
+    restart: always
+    environment:
+    - database__client=mysql
+    - database__connection__host=db
+    - database__connection__user=root
+    - database__connection__password=${MYSQL_ROOT_PASSWORD}
+    - database__connection__database=ghost
+    - mail_from=${MAIL_PASS}
+    - mail_options_auth_pass=${MAIL_PASS}
+    - mail_options_auth_user=${MAIL_USER}
+    - mail_options_from=${MAIL_USER}
+    - mail_options_host=${MAIL_HOST}
+    - mail_options_port=587
+    - mail_transport=SMTP
+    - url=https://${VIRTUAL_HOST}
+    volumes:
+    - ./data:/var/lib/ghost/content
+    networks:
+    - back
+  db:
+    image: mysql:5.7
+    restart: always
+    volumes:
+    - ./mysql/runtime:/var/lib/mysql
+    environment:
+    - MYSQL_ROOT_PASSWORD
+    - MYSQL_DATABASE=ghost
+    networks:
+    - back
